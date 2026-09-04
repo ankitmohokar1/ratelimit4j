@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (Java ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 17 is the language level the project targets; 21 is the current LTS. Building on both
+        # catches accidental use of newer APIs, which compile fine on the newer JDK and fail for
+        # anyone still on 17.
+        java: ['17', '21']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: temurin
+          cache: maven
+
+      - name: Build and test
+        # The GitHub runner has a Docker daemon, so the Testcontainers suites that skip locally
+        # actually run here — this is the only place the Lua scripts are exercised against a real
+        # Redis.
+        run: mvn --batch-mode --no-transfer-progress verify
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-java-${{ matrix.java }}
+          path: '**/target/surefire-reports/*.xml'
+          retention-days: 7
+
+  benchmarks:
+    name: Benchmarks compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      # Built but not run: a shared CI runner is far too noisy for the numbers to mean anything, and
+      # publishing figures measured on contended virtual hardware would be worse than publishing none.
+      # This step exists to keep the harness from rotting.
+      - name: Package benchmarks
+        run: mvn --batch-mode --no-transfer-progress -pl ratelimit4j-benchmarks -am package -DskipTests
