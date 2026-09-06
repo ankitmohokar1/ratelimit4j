@@ -14,6 +14,7 @@
 
   <modules>
     <module>ratelimit4j-core</module>
+    <module>ratelimit4j-redis</module>
   </modules>
 
   <properties>

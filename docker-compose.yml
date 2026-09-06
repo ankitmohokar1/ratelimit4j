@@ -1,0 +1,15 @@
+# Redis for the gateway's `redis` profile and for local integration testing.
+#
+#   docker compose up -d
+#   mvn -pl ratelimit4j-gateway -am spring-boot:run -Dspring-boot.run.profiles=redis
+services:
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
