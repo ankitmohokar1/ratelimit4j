@@ -1,0 +1,2 @@
+io.ratelimit4j.spring.RateLimitAutoConfiguration
+io.ratelimit4j.spring.RateLimitAutoConfiguration$RedisConnectionConfiguration

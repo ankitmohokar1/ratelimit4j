@@ -1,0 +1,63 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ratelimit4j-gateway
+
+ratelimit4j:
+  enabled: true
+
+  # GCRA is the default: exact, integer arithmetic, one long of state per key.
+  algorithm: GCRA
+
+  # LOCAL keeps everything in process. Switch to REDIS (see the redis profile below) to share one
+  # budget across a fleet.
+  backend: LOCAL
+
+  key-strategy: REMOTE_ADDRESS
+  emit-headers: true
+
+  # Evaluated in order — the first match wins, so the specific rule must come first. Reversing these
+  # two lines would let /api/** shadow the login rule and quietly raise the login limit to 100/min.
+  rules:
+    - path: /api/auth/login
+      permits: 5
+      window: 1m
+
+    - path: /api/**
+      permits: 100
+      window: 1m
+      # Allow a short burst above the sustained rate: real clients arrive in clumps, and refusing a
+      # brief burst from a client well inside its long-run budget is just a worse product.
+      burst: 120
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    io.ratelimit4j: INFO
+
+---
+# Run with: --spring.profiles.active=redis  (docker compose up -d first)
+spring:
+  config:
+    activate:
+      on-profile: redis
+
+ratelimit4j:
+  backend: REDIS
+  redis:
+    uri: redis://localhost:6379
+    key-prefix: "ratelimit4j:gateway:"
+    # If Redis goes down, keep serving with per-node limits rather than taking the gateway with it.
+    failure-mode: LOCAL_FALLBACK
+    failure-threshold: 5
+    breaker-open-duration: 10s

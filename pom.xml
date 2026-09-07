@@ -15,6 +15,9 @@
   <modules>
     <module>ratelimit4j-core</module>
     <module>ratelimit4j-redis</module>
+    <module>ratelimit4j-spring-boot-starter</module>
+    <module>ratelimit4j-gateway</module>
+    <module>ratelimit4j-benchmarks</module>
   </modules>
 
   <properties>
